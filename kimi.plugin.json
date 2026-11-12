@@ -1,0 +1,12 @@
+{
+  "name": "baton",
+  "version": "0.1.0",
+  "description": "Hand a coding task from one AI agent to another without re-explaining it.",
+  "license": "MIT",
+  "skills": "./skills/",
+  "sessionStart": { "skill": "handoff" },
+  "hooks": [
+    { "event": "SessionStart", "command": "node ./skills/handoff/scripts/handoff.js kimi", "timeout": 10 },
+    { "event": "Stop", "command": "node ./skills/handoff/scripts/handoff.js kimi", "timeout": 10 }
+  ]
+}

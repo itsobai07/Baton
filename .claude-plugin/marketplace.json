@@ -1,0 +1,11 @@
+{
+  "name": "baton",
+  "owner": { "name": "baton maintainers" },
+  "plugins": [
+    {
+      "name": "baton",
+      "source": "./",
+      "description": "Hand a coding task from one AI agent to another without re-explaining it."
+    }
+  ]
+}
