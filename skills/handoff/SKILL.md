@@ -20,6 +20,8 @@ The task's state lives in `.agents/handoff/` at the repository root:
 
 Read `HANDOFF.md` and the file named after you before doing anything else. Start from **Next step**. Do not retry anything listed under **Decisions** as rejected unless the user asks.
 
+If the briefing includes a **Repository state** section marked `STALE`, the last session was cut off before it updated the handoff. Read the listed files, trust the code where it disagrees with `HANDOFF.md`, and bring `HANDOFF.md` up to date before starting new work.
+
 ## While working
 
 Update `HANDOFF.md` in the same turn as any code change. The session can end without warning at a usage limit, so the file must be right at the end of every turn, not just the last one.

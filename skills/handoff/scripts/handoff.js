@@ -33,29 +33,45 @@ function start(root, agent) {
   console.log(fs.readFileSync(shared, 'utf8'));
   const own = path.join(dir, `${agent}.md`);
   if (/^[a-z]+$/.test(agent) && fs.existsSync(own)) console.log(fs.readFileSync(own, 'utf8'));
+  try { console.log(groundTruth(root, shared)); } catch {} // not a git repository
 }
 
-// Time of the newest code change, in ms: uncommitted files, or the last commit.
-function newestChange(root) {
-  let newest = 0;
+// Code changes git can see: uncommitted files, and the last commit unless it carried the handoff.
+function changes(root) {
+  const list = [];
   for (const entry of git(root, 'status', '--porcelain', '-z', '--untracked-files=all').split('\0')) {
     const file = entry.slice(3);
     if (!file || file.startsWith(REL + '/')) continue;
-    try { newest = Math.max(newest, fs.statSync(path.join(root, file)).mtimeMs); } catch {} // deleted, or a rename's old path
+    try { list.push({ what: file, time: fs.statSync(path.join(root, file)).mtimeMs }); } catch {} // deleted, or a rename's old path
   }
   try {
-    const [time, ...files] = git(root, 'show', '--name-only', '--format=%ct', 'HEAD').trim().split('\n');
+    const [head, ...files] = git(root, 'show', '--name-only', '--format=%ct %h %s', 'HEAD').trim().split('\n');
     // A commit that includes the handoff was handed off; its time is always later than the file's.
-    if (!files.includes(`${REL}/HANDOFF.md`)) newest = Math.max(newest, Number(time) * 1000);
+    if (!files.includes(`${REL}/HANDOFF.md`)) list.push({ what: `commit ${head.slice(head.indexOf(' ') + 1)}`, time: parseInt(head, 10) * 1000 });
   } catch {} // no commits yet
-  return newest;
+  return list;
+}
+
+// Facts the script collects itself, so the next agent need not trust what the last one wrote.
+// A usage limit can kill a session mid-turn, before the stop check ever runs.
+function groundTruth(root, shared) {
+  const since = fs.statSync(shared).mtimeMs;
+  const stale = changes(root).filter((c) => c.time > since).map((c) => c.what);
+  const out = ['## Repository state (collected by baton from git, not written by an agent)', ''];
+  out.push(`- Branch: ${git(root, 'branch', '--show-current').trim() || '(detached)'}`);
+  try { out.push('- Last commits:', git(root, 'log', '-3', '--format=  - %h %s').trimEnd()); } catch {} // no commits yet
+  if (!stale.length) return out.concat('- HANDOFF.md is newer than every code change git can see.').join('\n');
+  out.push(`- STALE: ${stale.length} change(s) are newer than HANDOFF.md, so the last session may have been cut off before updating it. Check these against the handoff, trust the code where they disagree, and update HANDOFF.md first:`);
+  out.push(...stale.slice(0, 20).map((f) => `  - ${f}`));
+  if (stale.length > 20) out.push(`  - ...and ${stale.length - 20} more`);
+  return out.join('\n');
 }
 
 function stop(root, input) {
   const dir = path.join(root, REL);
   const shared = path.join(dir, 'HANDOFF.md');
   if (input.stop_hook_active || !fs.existsSync(shared)) return 0;
-  const newest = newestChange(root);
+  const newest = Math.max(0, ...changes(root).map((c) => c.time));
   if (newest <= fs.statSync(shared).mtimeMs) return 0;
   // Kimi has no stop_hook_active, so remember what we already nagged about and never nag twice for it.
   const nag = path.join(dir, '.nag');

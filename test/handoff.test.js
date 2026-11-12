@@ -64,6 +64,37 @@ test('session start works from a subdirectory', () => {
   assert.match(run(sub, 'claude', { hook_event_name: 'SessionStart' }).stdout, /GOAL-TEXT/);
 });
 
+test('session start flags code that changed after the handoff was written', () => {
+  const dir = repo();
+  const shared = withHandoff(dir);
+  touch(shared, 10);
+  fs.writeFileSync(path.join(dir, 'app.js'), 'x');
+  touch(path.join(dir, 'app.js'), 20);
+  const r = run(dir, 'codex', { hook_event_name: 'SessionStart' });
+  assert.match(r.stdout, /Branch: \S/);
+  assert.match(r.stdout, /STALE: 1 change/);
+  assert.match(r.stdout, /  - app\.js/);
+});
+
+test('session start says the handoff is current when nothing changed after it', () => {
+  const dir = repo();
+  const shared = withHandoff(dir);
+  fs.writeFileSync(path.join(dir, 'app.js'), 'x');
+  touch(path.join(dir, 'app.js'), 10);
+  touch(shared, 20);
+  const r = run(dir, 'codex', { hook_event_name: 'SessionStart' });
+  assert.match(r.stdout, /newer than every code change/);
+  assert.doesNotMatch(r.stdout, /STALE/);
+});
+
+test('session start still briefs outside a git repository', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'baton-plain-'));
+  fs.writeFileSync(withHandoff(dir), 'GOAL-TEXT');
+  const r = run(dir, 'claude', { hook_event_name: 'SessionStart' });
+  assert.strictEqual(r.status, 0);
+  assert.match(r.stdout, /GOAL-TEXT/);
+});
+
 test('stop blocks once when code is newer than the handoff', () => {
   const dir = repo();
   const shared = withHandoff(dir);

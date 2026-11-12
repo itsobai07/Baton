@@ -69,6 +69,7 @@ Commit the folder if you want the handoff to follow the branch to another machin
 
 - A **skill** teaches the agent the format and to update `HANDOFF.md` in the same turn as any code change.
 - A **session-start hook** shows the incoming agent `HANDOFF.md` plus its own file, and nothing from the other agents' files.
+- The same hook adds **facts it collects from git itself**: the branch, the last commits, and every change newer than the handoff. If a limit killed the last session mid-turn, the next agent is told the handoff is stale and exactly which files to check, instead of trusting it.
 - A **stop hook** notices when code changed but the handoff did not, and sends the agent back once to update it. That is what keeps the file usable when a limit cuts the session off.
 
 It is opt-in per repository: nothing happens until you start a handoff there. The whole thing is one dependency-free Node script and a few Markdown files.
@@ -77,7 +78,7 @@ It is opt-in per repository: nothing happens until you start a handoff there. Th
 
 - Hooks sometimes do not fire, and they fail open by design, so the stop check is a strong reminder, not a guarantee.
 - The handoff is only as good as what the agent writes. Read it before you switch.
-- The stop check compares file times and the last commit. It does not notice a turn whose only change was deleting a file.
+- The stop check and the staleness report compare file times and the last commit. They do not notice a change that only deleted a file, and they need a git repository.
 - The automated suite runs on Windows, macOS and Linux, and the session-start hook has been run in a live Claude Code session. The hook formats follow each vendor's documentation as of November 2026; the Codex and Kimi Code registrations have not been run inside those agents.
 
 ## Contributing
