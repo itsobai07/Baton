@@ -20,6 +20,8 @@ The task's state lives in `.agents/handoff/` at the repository root:
 
 Read `HANDOFF.md` and the file named after you before doing anything else. Start from **Next step**. Do not retry anything listed under **Decisions** as rejected unless the user asks.
 
+A handoff belongs to one project folder, and the briefing's first line names it. If the user asks to resume and this folder has no handoff, or they mean a different project than the one named, do not start a new handoff: run `node scripts/handoff.js list` and tell them which folder to open.
+
 If the briefing includes a **Repository state** section marked `STALE`, the last session was cut off before it updated the handoff. Read the listed files, trust the code where it disagrees with `HANDOFF.md`, and bring `HANDOFF.md` up to date before starting new work.
 
 ## While working
@@ -32,10 +34,11 @@ Update `HANDOFF.md` in the same turn as any code change. The session can end wit
 - Keep the file under 60 lines. Replace old detail; do not append a log.
 - Touch the agent files only when the tooling the task depends on changes.
 
-## Status and export
+## Status, list and export
 
-Both commands use the same script as `init` and run from the repository.
+These commands use the same script as `init` and run from the repository.
 
+- The user asks which handoffs exist, or which project a handoff is for: run `node scripts/handoff.js list` and report what it prints.
 - The user asks for the handoff status, or whether it is safe to switch: run `node scripts/handoff.js status` and report what it prints.
 - The user wants to continue in a chat app that cannot read the repository (ChatGPT, Claude.ai): bring `HANDOFF.md` up to date, run `node scripts/handoff.js export`, and give them the output in one code block to paste.
 

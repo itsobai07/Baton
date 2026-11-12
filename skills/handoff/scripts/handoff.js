@@ -4,11 +4,15 @@
 //   node handoff.js init      create .agents/handoff/ from the templates
 //   node handoff.js status    is there a handoff, how old is it, and is it stale
 //   node handoff.js export    print the handoff as one prompt to paste into any chat app
+//   node handoff.js list      every handoff on this machine, newest first
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
 const REL = '.agents/handoff';
+// One line per repository that has had a handoff, so `list` need not scan the disk.
+const INDEX = path.join(os.homedir(), '.baton');
 
 function git(cwd, ...args) {
   return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
@@ -19,19 +23,47 @@ function repoRoot(cwd) {
   try { return git(cwd, 'rev-parse', '--show-toplevel').trim(); } catch { return cwd; }
 }
 
+function known() {
+  try { return fs.readFileSync(INDEX, 'utf8').split('\n').filter(Boolean); } catch { return []; }
+}
+
+function remember(root) {
+  try { if (!known().includes(root)) fs.appendFileSync(INDEX, root + '\n'); } catch {} // a read-only home must not break a hook
+}
+
+function age(file) {
+  const m = Math.round((Date.now() - fs.statSync(file).mtimeMs) / 60000);
+  return m < 60 ? `${m} minute(s) ago` : m < 2880 ? `${Math.round(m / 60)} hour(s) ago` : `${Math.round(m / 1440)} day(s) ago`;
+}
+
+// A handoff belongs to one folder; say which, so the wrong project is obvious in the first line.
+function label(root) {
+  return `"${path.basename(root)}" (${root})`;
+}
+
+function list() {
+  const shared = (root) => path.join(root, REL, 'HANDOFF.md');
+  const live = known().filter((root) => fs.existsSync(shared(root)));
+  if (!live.length) { console.log('baton: no handoffs on this machine yet.'); return; }
+  live.sort((a, b) => fs.statSync(shared(b)).mtimeMs - fs.statSync(shared(a)).mtimeMs);
+  console.log('baton: handoffs on this machine, newest first. Open a folder in your agent to continue that task.');
+  for (const root of live) console.log(`- ${label(root)}, updated ${age(shared(root))}`);
+}
+
 function init(root) {
   const dest = path.join(root, REL);
   fs.cpSync(path.join(__dirname, '..', 'templates'), dest, { recursive: true, force: false });
   const ignore = path.join(dest, '.gitignore');
   if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, '.nag\n');
+  remember(root);
   console.log(`baton: handoff files are in ${dest}`);
 }
 
 function status(root) {
   const shared = path.join(root, REL, 'HANDOFF.md');
-  if (!fs.existsSync(shared)) { console.log(`baton: no handoff in ${root}. Ask an agent to "start a handoff" to create one.`); return; }
-  const minutes = Math.round((Date.now() - fs.statSync(shared).mtimeMs) / 60000);
-  console.log(`baton: ${REL}/HANDOFF.md was last updated ${minutes} minute(s) ago.\n`);
+  if (!fs.existsSync(shared)) { console.log(`baton: no handoff in ${root}. Ask an agent to "start a handoff" to create one.\n`); list(); return; }
+  remember(root);
+  console.log(`baton: the handoff for ${label(root)} was last updated ${age(shared)}.\n`);
   try { console.log(groundTruth(root, shared)); } catch { console.log('Not a git repository, so baton cannot check the handoff against the code.'); }
 }
 
@@ -40,17 +72,19 @@ function exportPrompt(root) {
   const shared = path.join(root, REL, 'HANDOFF.md');
   if (!fs.existsSync(shared)) { console.error(`baton: no handoff in ${root}, so there is nothing to export.`); process.exit(1); }
   console.log('I am continuing a coding task that another AI assistant started. You cannot see my files, so everything you know about the task is below. Start from "Next step", do not retry anything listed under "Decisions" as rejected, and ask me to paste any file you need.\n');
+  console.log(`Project: ${path.basename(root)}\n`); // name only: this is pasted into a chat app, so keep the local path out
   console.log(fs.readFileSync(shared, 'utf8'));
   try { console.log(groundTruth(root, shared)); } catch {} // not a git repository
 }
 
-const COMMANDS = { init, status, export: exportPrompt };
+const COMMANDS = { init, status, export: exportPrompt, list };
 
 function start(root, agent) {
   const dir = path.join(root, REL);
   const shared = path.join(dir, 'HANDOFF.md');
   if (!fs.existsSync(shared)) return;
-  console.log(`baton: a previous session left a handoff in ${REL}/. Read it before acting, and keep HANDOFF.md current as you work.\n`);
+  remember(root);
+  console.log(`baton: a previous session left a handoff for ${label(root)} in ${REL}/. Read it before acting, and keep HANDOFF.md current as you work. If the user means a different project, say so and run this script with "list".\n`);
   console.log(fs.readFileSync(shared, 'utf8'));
   const own = path.join(dir, `${agent}.md`);
   if (/^[a-z]+$/.test(agent) && fs.existsSync(own)) console.log(fs.readFileSync(own, 'utf8'));

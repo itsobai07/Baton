@@ -69,14 +69,22 @@ Commit the folder if you want the handoff to follow the branch to another machin
 
 Say **"handoff status"**. The agent reports how old the handoff is and lists every change git can see that is newer than it.
 
+### One handoff per project
+
+A handoff belongs to the folder it was started in, and every briefing names that project in its first line. Working on several projects? Say **"list the handoffs"** to see each one with its folder and age, then open the right folder. baton keeps the list in one file, `~/.baton`.
+
 ### Any chat app
 
 A chat app such as ChatGPT or Claude.ai cannot read your repository or run hooks. Say **"export the handoff"** and the agent prints the task state as one prompt. Paste it into the chat app and carry on there.
 
-Both also run without an agent, from the repository:
+All three also run without an agent, from the repository:
 
 ```bash
 npx github:itsobai07/baton status
+```
+
+```bash
+npx github:itsobai07/baton list
 ```
 
 ```bash

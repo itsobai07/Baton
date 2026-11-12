@@ -13,9 +13,12 @@ function repo() {
   return dir;
 }
 
+// A throwaway home folder, so the tests never touch the real handoff index.
+const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'baton-home-'));
+
 function run(cwd, arg, input) {
   return spawnSync('node', [SCRIPT, arg], {
-    cwd, encoding: 'utf8', input: input === undefined ? '' : JSON.stringify({ cwd, ...input }),
+    cwd, encoding: 'utf8', env: { ...process.env, HOME, USERPROFILE: HOME }, input: input === undefined ? '' : JSON.stringify({ cwd, ...input }),
   });
 }
 
@@ -150,7 +153,7 @@ test('status reports a missing handoff, then its age and what is stale', () => {
   touch(withHandoff(dir), 10);
   fs.writeFileSync(path.join(dir, 'app.js'), 'x');
   const out = run(dir, 'status').stdout;
-  assert.match(out, /last updated \d+ minute/);
+  assert.match(out, /last updated \d+ (minute|hour|day)/);
   assert.match(out, /STALE: 1 change/);
 });
 
@@ -163,6 +166,30 @@ test('export prints one paste-ready prompt, and fails without a handoff', () => 
   assert.match(r.stdout, /^I am continuing a coding task/);
   assert.match(r.stdout, /GOAL-MARKER/);
   assert.match(r.stdout, /Repository state/);
+});
+
+test('briefing, status and export name the project', () => {
+  const dir = repo();
+  const name = path.basename(dir);
+  fs.writeFileSync(withHandoff(dir), 'GOAL-TEXT');
+  assert.ok(run(dir, 'codex', { hook_event_name: 'SessionStart' }).stdout.includes(`handoff for "${name}"`));
+  assert.ok(run(dir, 'status').stdout.includes(`handoff for "${name}"`));
+  const exported = run(dir, 'export').stdout;
+  assert.ok(exported.includes(`Project: ${name}`));
+  assert.ok(!exported.includes(path.dirname(dir)), 'export must not contain the local path');
+});
+
+test('list shows every handoff newest first and leaves out deleted ones', () => {
+  const [older, newer, gone] = [repo(), repo(), repo()];
+  touch(withHandoff(older), 10);
+  touch(withHandoff(newer), 20);
+  withHandoff(gone);
+  fs.rmSync(path.join(gone, '.agents'), { recursive: true });
+  const out = run(repo(), 'list').stdout;
+  assert.ok(out.includes(path.basename(newer)), 'newer is listed');
+  assert.ok(out.indexOf(path.basename(newer)) < out.indexOf(path.basename(older)), 'newest first');
+  assert.ok(!out.includes(path.basename(gone)), 'deleted handoff is not listed');
+  assert.ok(run(repo(), 'status').stdout.includes(path.basename(newer)), 'status without a handoff points at the others');
 });
 
 test('the Codex plugin manifest points at files that exist', () => {
