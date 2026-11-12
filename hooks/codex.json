@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/skills/handoff/scripts/handoff.js\" codex",
+            "timeout": 10,
+            "statusMessage": "Loading the handoff"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/skills/handoff/scripts/handoff.js\" codex",
+            "timeout": 10,
+            "statusMessage": "Checking the handoff"
+          }
+        ]
+      }
+    ]
+  }
+}

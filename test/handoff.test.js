@@ -143,3 +143,35 @@ test('stop never blocks without a handoff, when already continuing, or on bad in
   assert.strictEqual(run(dir, 'claude', { hook_event_name: 'Stop', stop_hook_active: true }).status, 0);
   assert.strictEqual(spawnSync('node', [SCRIPT, 'claude'], { cwd: dir, input: 'not json' }).status, 0);
 });
+
+test('status reports a missing handoff, then its age and what is stale', () => {
+  const dir = repo();
+  assert.match(run(dir, 'status').stdout, /no handoff/);
+  touch(withHandoff(dir), 10);
+  fs.writeFileSync(path.join(dir, 'app.js'), 'x');
+  const out = run(dir, 'status').stdout;
+  assert.match(out, /last updated \d+ minute/);
+  assert.match(out, /STALE: 1 change/);
+});
+
+test('export prints one paste-ready prompt, and fails without a handoff', () => {
+  const dir = repo();
+  assert.strictEqual(run(dir, 'export').status, 1);
+  fs.writeFileSync(withHandoff(dir), 'GOAL-MARKER');
+  const r = run(dir, 'export');
+  assert.strictEqual(r.status, 0);
+  assert.match(r.stdout, /^I am continuing a coding task/);
+  assert.match(r.stdout, /GOAL-MARKER/);
+  assert.match(r.stdout, /Repository state/);
+});
+
+test('the Codex plugin manifest points at files that exist', () => {
+  const root = path.join(__dirname, '..');
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, '.codex-plugin', 'plugin.json'), 'utf8'));
+  assert.strictEqual(manifest.version, require('../package.json').version);
+  const hooks = JSON.parse(fs.readFileSync(path.join(root, manifest.hooks), 'utf8')).hooks;
+  for (const event of ['SessionStart', 'Stop']) {
+    const file = hooks[event][0].hooks[0].command.match(/\$\{PLUGIN_ROOT\}\/([^"]+)/)[1];
+    assert.ok(fs.existsSync(path.join(root, file)), file);
+  }
+});

@@ -2,6 +2,8 @@
 // baton: one hook script shared by Claude Code, Codex and Kimi Code.
 //   node handoff.js <agent>   hook mode: event JSON on stdin (SessionStart, Stop)
 //   node handoff.js init      create .agents/handoff/ from the templates
+//   node handoff.js status    is there a handoff, how old is it, and is it stale
+//   node handoff.js export    print the handoff as one prompt to paste into any chat app
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -24,6 +26,25 @@ function init(root) {
   if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, '.nag\n');
   console.log(`baton: handoff files are in ${dest}`);
 }
+
+function status(root) {
+  const shared = path.join(root, REL, 'HANDOFF.md');
+  if (!fs.existsSync(shared)) { console.log(`baton: no handoff in ${root}. Ask an agent to "start a handoff" to create one.`); return; }
+  const minutes = Math.round((Date.now() - fs.statSync(shared).mtimeMs) / 60000);
+  console.log(`baton: ${REL}/HANDOFF.md was last updated ${minutes} minute(s) ago.\n`);
+  try { console.log(groundTruth(root, shared)); } catch { console.log('Not a git repository, so baton cannot check the handoff against the code.'); }
+}
+
+// For chat apps with no hooks and no access to the repository: everything in one paste.
+function exportPrompt(root) {
+  const shared = path.join(root, REL, 'HANDOFF.md');
+  if (!fs.existsSync(shared)) { console.error(`baton: no handoff in ${root}, so there is nothing to export.`); process.exit(1); }
+  console.log('I am continuing a coding task that another AI assistant started. You cannot see my files, so everything you know about the task is below. Start from "Next step", do not retry anything listed under "Decisions" as rejected, and ask me to paste any file you need.\n');
+  console.log(fs.readFileSync(shared, 'utf8'));
+  try { console.log(groundTruth(root, shared)); } catch {} // not a git repository
+}
+
+const COMMANDS = { init, status, export: exportPrompt };
 
 function start(root, agent) {
   const dir = path.join(root, REL);
@@ -83,7 +104,7 @@ function stop(root, input) {
 
 function main() {
   const agent = process.argv[2] || '';
-  if (agent === 'init') { init(repoRoot(process.cwd())); return 0; }
+  if (Object.hasOwn(COMMANDS, agent)) { COMMANDS[agent](repoRoot(process.cwd())); return 0; }
   const input = JSON.parse(fs.readFileSync(0, 'utf8'));
   // Kimi runs plugin hooks from the plugin folder, so trust the event's cwd over our own.
   const root = repoRoot(input.cwd || process.cwd());
@@ -93,4 +114,4 @@ function main() {
 }
 
 // Fail open: a handoff tool must never trap a session.
-try { process.exitCode = main(); } catch (e) { if (process.argv[2] === 'init') throw e; process.exitCode = 0; }
+try { process.exitCode = main(); } catch (e) { if (Object.hasOwn(COMMANDS, process.argv[2] || '')) throw e; process.exitCode = 0; }

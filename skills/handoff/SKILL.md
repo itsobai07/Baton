@@ -32,6 +32,13 @@ Update `HANDOFF.md` in the same turn as any code change. The session can end wit
 - Keep the file under 60 lines. Replace old detail; do not append a log.
 - Touch the agent files only when the tooling the task depends on changes.
 
+## Status and export
+
+Both commands use the same script as `init` and run from the repository.
+
+- The user asks for the handoff status, or whether it is safe to switch: run `node scripts/handoff.js status` and report what it prints.
+- The user wants to continue in a chat app that cannot read the repository (ChatGPT, Claude.ai): bring `HANDOFF.md` up to date, run `node scripts/handoff.js export`, and give them the output in one code block to paste.
+
 ## Finishing
 
 When the task is complete and the user confirms, delete `.agents/handoff/`. A leftover handoff will be fed to the next session as if the task were still open.

@@ -30,13 +30,23 @@ baton keeps that state in plain files in your repository, current at the end of 
 /reload
 ```
 
-**Codex, Gemini CLI, Cursor**
+**Codex** (desktop app or CLI)
+
+```bash
+codex plugin marketplace add itsobai07/baton
+```
+
+Then install baton from **Plugins** and trust its two hooks. The [Codex guide](docs/codex.md) has the app steps.
+
+**Gemini CLI, Cursor**
 
 ```bash
 npx skills add itsobai07/baton
 ```
 
-Requires Node.js 18 or later and git. Codex needs one more step to turn on the hooks; see its guide.
+**ChatGPT, Claude.ai or any other chat app**: nothing to install; see [Any chat app](#any-chat-app).
+
+Requires Node.js 18 or later and git.
 
 | Agent | Automatic (hooks) | Guide |
 |---|---|---|
@@ -54,6 +64,24 @@ Requires Node.js 18 or later and git. Codex needs one more step to turn on the h
 4. When the task is finished, delete `.agents/handoff/`.
 
 Commit the folder if you want the handoff to follow the branch to another machine or teammate; otherwise add it to `.gitignore`.
+
+### Check before you switch
+
+Say **"handoff status"**. The agent reports how old the handoff is and lists every change git can see that is newer than it.
+
+### Any chat app
+
+A chat app such as ChatGPT or Claude.ai cannot read your repository or run hooks. Say **"export the handoff"** and the agent prints the task state as one prompt. Paste it into the chat app and carry on there.
+
+Both also run without an agent, from the repository:
+
+```bash
+npx github:itsobai07/baton status
+```
+
+```bash
+npx github:itsobai07/baton export
+```
 
 ## How it works
 
@@ -79,7 +107,7 @@ It is opt-in per repository: nothing happens until you start a handoff there. Th
 - Hooks sometimes do not fire, and they fail open by design, so the stop check is a strong reminder, not a guarantee.
 - The handoff is only as good as what the agent writes. Read it before you switch.
 - The stop check and the staleness report compare file times and the last commit. They do not notice a change that only deleted a file, and they need a git repository.
-- The automated suite runs on Windows, macOS and Linux, and the session-start hook has been run in a live Claude Code session. The hook formats follow each vendor's documentation as of November 2026; the Codex and Kimi Code registrations have not been run inside those agents.
+- The automated suite runs on Windows, macOS and Linux, and the session-start hook has been run in a live Claude Code session. The hook formats follow each vendor's documentation as of November 2026; the Codex plugin and Kimi Code registrations have not been run inside those agents.
 
 ## Contributing
 

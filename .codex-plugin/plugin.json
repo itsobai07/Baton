@@ -1,0 +1,27 @@
+{
+  "name": "baton",
+  "version": "0.3.0",
+  "description": "Hand a coding task from one AI agent to another without re-explaining it.",
+  "author": { "name": "baton maintainers", "url": "https://github.com/itsobai07/Baton" },
+  "homepage": "https://github.com/itsobai07/Baton",
+  "repository": "https://github.com/itsobai07/Baton",
+  "license": "MIT",
+  "keywords": ["handoff", "context", "agents", "session"],
+  "skills": "./skills/",
+  "hooks": "./hooks/codex.json",
+  "interface": {
+    "displayName": "baton",
+    "shortDescription": "Hand a task to another AI agent",
+    "longDescription": "Keeps the state of a coding task in plain files in your repository and briefs whichever agent works next, so you can switch between Codex, Claude Code and others without re-explaining the task. The briefing is checked against git, so a session that was cut off mid-turn is reported as stale.",
+    "developerName": "baton maintainers",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/itsobai07/Baton",
+    "defaultPrompt": [
+      "start a handoff for this task.",
+      "resume from the handoff.",
+      "show the handoff status."
+    ],
+    "brandColor": "#CFA960"
+  }
+}

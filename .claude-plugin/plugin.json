@@ -1,6 +1,6 @@
 {
   "name": "baton",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Hand a coding task from one AI agent to another without re-explaining it.",
   "license": "MIT"
 }
