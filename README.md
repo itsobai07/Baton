@@ -78,7 +78,7 @@ It is opt-in per repository: nothing happens until you start a handoff there. Th
 - Hooks sometimes do not fire, and they fail open by design, so the stop check is a strong reminder, not a guarantee.
 - The handoff is only as good as what the agent writes. Read it before you switch.
 - The stop check compares file times and the last commit. It does not notice a turn whose only change was deleting a file.
-- Tested on Windows with the automated suite, and the session-start hook has been run in a live Claude Code session. The hook formats follow each vendor's documentation as of November 2026; the Codex and Kimi Code registrations have not been run inside those agents.
+- The automated suite runs on Windows, macOS and Linux, and the session-start hook has been run in a live Claude Code session. The hook formats follow each vendor's documentation as of November 2026; the Codex and Kimi Code registrations have not been run inside those agents.
 
 ## Contributing
 
